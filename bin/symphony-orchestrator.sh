@@ -84,7 +84,7 @@ create_session() {
     tmux select-pane -t "$SESSION_NAME:0.5" -T "Monitor"
     
     # Start monitor in right pane
-    tmux send-keys -t "$SESSION_NAME:0.5" "echo 'Symphony Monitor - Task: $TASK_DESCRIPTION'; echo ''; watch -n 5 'date; echo; if [ -d .symphony/tasks ]; then find .symphony/tasks -name \"PROGRESS.md\" -exec echo \"--- {} ---\" \\; -exec cat {} \\; -exec echo \\; 2>/dev/null | head -50; else echo \"No active tasks\"; fi'" Enter
+    tmux send-keys -t "$SESSION_NAME:0.5" "echo 'Symphony Monitor'; echo ''; watch -n 5 'date; echo; if [ -d .symphony/tasks ]; then find .symphony/tasks -name \"PROGRESS.md\" -exec echo \"--- {} ---\" \\; -exec cat {} \\; -exec echo \\; 2>/dev/null | head -50; else echo \"No active tasks\"; fi'" Enter
     
     echo -e "${GREEN}✓ tmux session created with layout${NC}"
 }
@@ -92,6 +92,7 @@ create_session() {
 # Start orchestrator in main pane
 start_orchestrator() {
     local task_id="$1"
+    local task_desc="$2"
     
     echo -e "${BLUE}Starting orchestrator agent...${NC}"
     
@@ -99,17 +100,43 @@ start_orchestrator() {
     tmux select-pane -t "$SESSION_NAME:0.0"
     tmux send-keys -t "$SESSION_NAME:0.0" "clear" Enter
     tmux send-keys -t "$SESSION_NAME:0.0" "echo 'Symphony Orchestrator - Task $task_id'" Enter
-    tmux send-keys -t "$SESSION_NAME:0.0" "echo 'Task: $TASK_DESCRIPTION'" Enter
+    tmux send-keys -t "$SESSION_NAME:0.0" "echo 'Task: $task_desc'" Enter
     tmux send-keys -t "$SESSION_NAME:0.0" "echo ''" Enter
     
     # Generate orchestrator prompt
     local orchestrator_prompt
-    orchestrator_prompt=$(generate_orchestrator_prompt "$task_id" "$TASK_DESCRIPTION")
+    orchestrator_prompt=$(generate_orchestrator_prompt "$task_id" "$task_desc")
     
     # Start Claude Code with orchestrator prompt
     tmux send-keys -t "$SESSION_NAME:0.0" "claude --task '$orchestrator_prompt'" Enter
     
     echo -e "${GREEN}✓ Orchestrator agent started${NC}"
+}
+
+# Show interactive prompt in orchestrator pane
+show_orchestrator_prompt() {
+    echo -e "${BLUE}Setting up orchestrator console...${NC}"
+    
+    # Switch to orchestrator pane
+    tmux select-pane -t "$SESSION_NAME:0.0"
+    tmux send-keys -t "$SESSION_NAME:0.0" "clear" Enter
+    
+    # Start the interactive console script
+    if [[ -f "$SYMPHONY_BIN/symphony-console.sh" ]]; then
+        tmux send-keys -t "$SESSION_NAME:0.0" "$SYMPHONY_BIN/symphony-console.sh" Enter
+    else
+        # Fallback if console script doesn't exist
+        tmux send-keys -t "$SESSION_NAME:0.0" "echo '🎼 Symphony Orchestrator Console'" Enter
+        tmux send-keys -t "$SESSION_NAME:0.0" "echo '================================'" Enter
+        tmux send-keys -t "$SESSION_NAME:0.0" "echo ''" Enter
+        tmux send-keys -t "$SESSION_NAME:0.0" "echo 'Welcome to Symphony! The tmux session is ready.'" Enter
+        tmux send-keys -t "$SESSION_NAME:0.0" "echo ''" Enter
+        tmux send-keys -t "$SESSION_NAME:0.0" "echo 'Console script not found. Please check installation.'" Enter
+        tmux send-keys -t "$SESSION_NAME:0.0" "echo ''" Enter
+        tmux send-keys -t "$SESSION_NAME:0.0" "bash" Enter
+    fi
+    
+    echo -e "${GREEN}✓ Orchestrator console ready${NC}"
 }
 
 # Generate orchestrator prompt
@@ -146,11 +173,8 @@ EOF
 
 # Main orchestrator flow
 main() {
-    if [[ -z "$TASK_DESCRIPTION" ]]; then
-        echo -e "${RED}Error: No task description provided${NC}"
-        echo "Usage: symphony-orchestrator.sh 'Task description'"
-        exit 1
-    fi
+    # Optional task description from command line
+    local initial_task="$1"
     
     # Check if already running
     if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
@@ -160,37 +184,40 @@ main() {
     fi
     
     echo -e "${BLUE}🎼 Symphony Orchestrator Starting${NC}"
-    echo "Task: $TASK_DESCRIPTION"
+    if [[ -n "$initial_task" ]]; then
+        echo "Initial task provided: $initial_task"
+        echo "(You can start this task from the orchestrator console)"
+    fi
     echo
-    
-    # Initialize task
-    echo "Initializing task..."
-    task_id=$(init_task)
-    echo -e "${GREEN}✓ Task initialized with ID: $task_id${NC}"
     
     # Create tmux session
     create_session
     
-    # Start orchestrator agent
-    start_orchestrator "$task_id"
+    # Show interactive prompt instead of starting orchestrator
+    show_orchestrator_prompt
+    
+    # If initial task was provided, prepare the start command in the prompt
+    if [[ -n "$initial_task" ]]; then
+        # Wait a moment for console to load, then pre-fill the command
+        sleep 1
+        tmux send-keys -t "$SESSION_NAME:0.0" "start \"$initial_task\""
+        echo
+        echo -e "${YELLOW}Task command prepared in orchestrator console.${NC}"
+        echo "Press Enter in the orchestrator pane to start the task."
+    fi
     
     echo
-    echo -e "${GREEN}🎉 Symphony orchestrator started!${NC}"
+    echo -e "${GREEN}🎉 Symphony session created!${NC}"
     echo
     echo "Commands:"
     echo "  symphony attach   - Attach to tmux session"
     echo "  symphony status   - Check status"
     echo "  symphony stop     - Stop orchestrator"
     echo
-    echo "The orchestrator is now analyzing your task and will:"
-    echo "1. Read your project configuration"
-    echo "2. Create an implementation plan"
-    echo "3. Ask for your approval"
-    echo "4. Spawn specialized agents in parallel"
-    echo
-    echo "Use 'symphony attach' to view progress."
+    echo "The orchestrator console is ready and waiting for your commands."
+    echo "Use 'symphony attach' to interact with the orchestrator."
     
-    # Keep script running (could add monitoring here)
+    # Keep script running briefly
     sleep 2
 }
 
