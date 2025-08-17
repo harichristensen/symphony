@@ -101,6 +101,8 @@ download_scripts() {
     download_file "$REPO_BASE/bin/symphony-spawn-agent.sh" "$SYMPHONY_BIN/symphony-spawn-agent.sh" "agent spawner"
     download_file "$REPO_BASE/bin/symphony-monitor.sh" "$SYMPHONY_BIN/symphony-monitor.sh" "monitor"
     download_file "$REPO_BASE/bin/symphony-cleanup.sh" "$SYMPHONY_BIN/symphony-cleanup.sh" "cleanup utility"
+    download_file "$REPO_BASE/bin/symphony-console.sh" "$SYMPHONY_BIN/symphony-console.sh" "console interface"
+    download_file "$REPO_BASE/bin/symphony-update.sh" "$SYMPHONY_BIN/symphony-update.sh" "update script"
     
     # Library scripts
     download_file "$REPO_BASE/lib/tmux-layouts.sh" "$SYMPHONY_LIB/tmux-layouts.sh" "tmux layouts"

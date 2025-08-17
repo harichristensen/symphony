@@ -39,6 +39,7 @@ Commands:
   clean                  Clean up tmux sessions and worktrees
   logs [agent]           Show logs for specific agent or all agents
   config                 Show current configuration
+  update                 Update Symphony to the latest version
   version                Show version information
 
 Examples:
@@ -321,6 +322,30 @@ cmd_version() {
     echo "Tmux orchestration system for Claude Code"
 }
 
+# Update Symphony
+cmd_update() {
+    echo -e "${BLUE}🎼 Updating Symphony...${NC}"
+    
+    if [[ -f "$SYMPHONY_BIN/symphony-update.sh" ]]; then
+        exec "$SYMPHONY_BIN/symphony-update.sh"
+    else
+        echo -e "${YELLOW}Update script not found. Downloading...${NC}"
+        # Try to download the update script
+        local update_url="https://raw.githubusercontent.com/harichristensen/symphony/main/bin/symphony-update.sh"
+        local temp_update="/tmp/symphony-update-$$.sh"
+        
+        if curl -fsSL "$update_url" -o "$temp_update" 2>/dev/null; then
+            chmod +x "$temp_update"
+            exec "$temp_update"
+        else
+            echo -e "${RED}Failed to download update script${NC}"
+            echo "You can manually update by running:"
+            echo "  curl -fsSL https://raw.githubusercontent.com/harichristensen/symphony/main/install.sh | bash"
+            exit 1
+        fi
+    fi
+}
+
 # Main command handler
 main() {
     case "${1:-help}" in
@@ -347,6 +372,9 @@ main() {
             ;;
         "config")
             cmd_config
+            ;;
+        "update")
+            cmd_update
             ;;
         "version")
             cmd_version
