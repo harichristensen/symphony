@@ -1,0 +1,366 @@
+#!/bin/bash
+
+# Symphony - Main CLI entry point
+# Tmux-based orchestration system for Claude Code agents
+
+set -e
+
+SYMPHONY_VERSION="1.0.0"
+SYMPHONY_DIR="$HOME/.symphony"
+SYMPHONY_BIN="$SYMPHONY_DIR/bin"
+SYMPHONY_LIB="$SYMPHONY_DIR/lib"
+SYMPHONY_RUNTIME="$SYMPHONY_DIR/.runtime"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Source library functions
+if [[ -f "$SYMPHONY_LIB/git-operations.sh" ]]; then
+    source "$SYMPHONY_LIB/git-operations.sh"
+fi
+
+# Show usage
+show_usage() {
+    cat << EOF
+🎼 Symphony v$SYMPHONY_VERSION - Claude Code Orchestration System
+
+Usage: symphony <command> [options]
+
+Commands:
+  init                    Initialize Symphony in current git repository
+  start [task]           Start orchestrator with optional task description
+  status                 Show current task and agent status
+  attach                 Attach to active tmux session
+  stop                   Stop all agents and orchestrator
+  clean                  Clean up tmux sessions and worktrees
+  logs [agent]           Show logs for specific agent or all agents
+  config                 Show current configuration
+  version                Show version information
+
+Examples:
+  symphony init
+  symphony start "Add user authentication system"
+  symphony status
+  symphony attach
+  symphony stop
+  symphony clean
+
+For more help: symphony <command> --help
+Documentation: https://github.com/YOUR_ORG/symphony
+EOF
+}
+
+# Check if we're in a git repository
+check_git_repo() {
+    if [[ ! -d ".git" ]]; then
+        echo -e "${RED}Error: Not in a git repository${NC}"
+        echo "Symphony requires a git repository to manage worktrees."
+        echo "Run 'git init' first or navigate to a git repository."
+        exit 1
+    fi
+}
+
+# Initialize Symphony in current repository
+cmd_init() {
+    echo -e "${BLUE}🎼 Initializing Symphony in current repository...${NC}"
+    
+    check_git_repo
+    
+    # Create .symphony directory structure
+    mkdir -p .symphony/{state,worktrees,tasks,logs}
+    
+    # Create initial configuration if it doesn't exist
+    if [[ ! -f "symphony.config.yml" ]]; then
+        if [[ -f "$SYMPHONY_DIR/config/symphony.config.yml.example" ]]; then
+            cp "$SYMPHONY_DIR/config/symphony.config.yml.example" "symphony.config.yml"
+            echo -e "${GREEN}✓ Created symphony.config.yml${NC}"
+        else
+            echo -e "${YELLOW}Warning: Config template not found. Creating basic config...${NC}"
+            cat > symphony.config.yml << 'EOF'
+version: 1.0
+
+agent_lanes:
+  frontend-agent:
+    directories:
+      - '/src/components/'
+      - '/src/pages/'
+      - '/public/'
+  backend-agent:
+    directories:
+      - '/api/'
+      - '/server/'
+      - '/lib/'
+  test-agent:
+    directories:
+      - '/tests/'
+      - '/__tests__/'
+
+shared_directories:
+  - '/shared/'
+  - '/types/'
+
+orchestrator:
+  retry_count: 3
+  timeout_minutes: 10
+  polling_interval_seconds: 30
+
+task_processing:
+  max_parallel_agents: 4
+  require_human_approval: true
+  auto_merge_strategy: 'conservative'
+EOF
+            echo -e "${GREEN}✓ Created basic symphony.config.yml${NC}"
+        fi
+    else
+        echo -e "${GREEN}✓ symphony.config.yml already exists${NC}"
+    fi
+    
+    # Initialize state files
+    echo '{"tasks": [], "current": null, "completed": []}' > .symphony/state/QUEUE.json
+    
+    # Add .symphony to .gitignore if not present
+    if [[ -f ".gitignore" ]]; then
+        if ! grep -q "\.symphony" .gitignore; then
+            echo "" >> .gitignore
+            echo "# Symphony runtime files" >> .gitignore
+            echo ".symphony/state/" >> .gitignore
+            echo ".symphony/worktrees/" >> .gitignore
+            echo ".symphony/logs/" >> .gitignore
+            echo -e "${GREEN}✓ Added Symphony entries to .gitignore${NC}"
+        fi
+    else
+        cat > .gitignore << 'EOF'
+# Symphony runtime files
+.symphony/state/
+.symphony/worktrees/
+.symphony/logs/
+EOF
+        echo -e "${GREEN}✓ Created .gitignore with Symphony entries${NC}"
+    fi
+    
+    echo -e "${GREEN}🎉 Symphony initialized successfully!${NC}"
+    echo
+    echo "Next steps:"
+    echo "1. Edit symphony.config.yml to configure agent lanes for your project"
+    echo "2. Run 'symphony start' to begin orchestration"
+    echo "3. Use 'symphony attach' to view progress in tmux"
+}
+
+# Start orchestrator
+cmd_start() {
+    local task_description="$1"
+    
+    check_git_repo
+    
+    if [[ ! -f "symphony.config.yml" ]]; then
+        echo -e "${RED}Error: symphony.config.yml not found${NC}"
+        echo "Run 'symphony init' first to initialize Symphony in this repository."
+        exit 1
+    fi
+    
+    echo -e "${BLUE}🎼 Starting Symphony orchestrator...${NC}"
+    
+    # Check if already running
+    if tmux has-session -t symphony 2>/dev/null; then
+        echo -e "${YELLOW}Symphony session already exists. Use 'symphony attach' to view or 'symphony stop' to stop.${NC}"
+        exit 0
+    fi
+    
+    # Start orchestrator in tmux
+    if [[ -f "$SYMPHONY_BIN/symphony-orchestrator.sh" ]]; then
+        exec "$SYMPHONY_BIN/symphony-orchestrator.sh" "$task_description"
+    else
+        echo -e "${RED}Error: symphony-orchestrator.sh not found${NC}"
+        echo "Reinstall Symphony or check your installation."
+        exit 1
+    fi
+}
+
+# Show status
+cmd_status() {
+    check_git_repo
+    
+    echo -e "${BLUE}🎼 Symphony Status${NC}"
+    echo
+    
+    # Check if tmux session exists
+    if ! tmux has-session -t symphony 2>/dev/null; then
+        echo -e "${YELLOW}No active Symphony session${NC}"
+        echo "Run 'symphony start' to begin orchestration"
+        return
+    fi
+    
+    echo -e "${GREEN}✓ Symphony session active${NC}"
+    
+    # Show current task if state file exists
+    if [[ -f ".symphony/state/CURRENT_TASK.json" ]]; then
+        echo "Current task:"
+        cat .symphony/state/CURRENT_TASK.json | grep -E '"(id|state|started)"' || echo "No current task"
+    fi
+    
+    # Show active agents
+    echo
+    echo "Active tmux panes:"
+    tmux list-panes -t symphony -F "#{pane_index}: #{pane_title}" 2>/dev/null || echo "No panes found"
+    
+    # Show recent progress
+    if [[ -d ".symphony/tasks" ]]; then
+        echo
+        echo "Recent progress:"
+        find .symphony/tasks -name "PROGRESS.md" -exec echo "--- {} ---" \; -exec tail -3 {} \; 2>/dev/null | head -20
+    fi
+}
+
+# Attach to tmux session
+cmd_attach() {
+    if ! tmux has-session -t symphony 2>/dev/null; then
+        echo -e "${RED}No active Symphony session${NC}"
+        echo "Run 'symphony start' first"
+        exit 1
+    fi
+    
+    echo -e "${BLUE}Attaching to Symphony session...${NC}"
+    echo "Press Ctrl+B, then D to detach"
+    exec tmux attach-session -t symphony
+}
+
+# Stop orchestrator
+cmd_stop() {
+    echo -e "${BLUE}🎼 Stopping Symphony...${NC}"
+    
+    if tmux has-session -t symphony 2>/dev/null; then
+        tmux kill-session -t symphony
+        echo -e "${GREEN}✓ Symphony session stopped${NC}"
+    else
+        echo -e "${YELLOW}No active Symphony session to stop${NC}"
+    fi
+}
+
+# Clean up
+cmd_clean() {
+    echo -e "${BLUE}🎼 Cleaning up Symphony...${NC}"
+    
+    # Stop session if running
+    cmd_stop
+    
+    # Clean up worktrees
+    if [[ -f "$SYMPHONY_BIN/symphony-cleanup.sh" ]]; then
+        "$SYMPHONY_BIN/symphony-cleanup.sh"
+    else
+        echo "Cleaning up manually..."
+        if [[ -d ".symphony/worktrees" ]]; then
+            cd .symphony/worktrees
+            for dir in */; do
+                if [[ -d "$dir" ]]; then
+                    echo "Removing worktree: $dir"
+                    git worktree remove "$dir" 2>/dev/null || rm -rf "$dir"
+                fi
+            done
+            cd - > /dev/null
+        fi
+    fi
+    
+    # Clean state files
+    rm -f .symphony/state/CURRENT_TASK.json
+    rm -f .symphony/state/REGISTRY.json
+    
+    echo -e "${GREEN}✓ Cleanup complete${NC}"
+}
+
+# Show logs
+cmd_logs() {
+    local agent="$1"
+    
+    check_git_repo
+    
+    if [[ -n "$agent" ]]; then
+        # Show specific agent logs
+        if [[ -f ".symphony/logs/$agent.log" ]]; then
+            tail -f ".symphony/logs/$agent.log"
+        else
+            echo -e "${RED}Log file not found for agent: $agent${NC}"
+            echo "Available logs:"
+            ls .symphony/logs/ 2>/dev/null || echo "No logs found"
+        fi
+    else
+        # Show all recent logs
+        echo -e "${BLUE}Recent Symphony logs:${NC}"
+        if [[ -d ".symphony/logs" ]]; then
+            for log in .symphony/logs/*.log; do
+                if [[ -f "$log" ]]; then
+                    echo -e "\n${YELLOW}--- $(basename "$log") ---${NC}"
+                    tail -10 "$log"
+                fi
+            done
+        else
+            echo "No logs directory found"
+        fi
+    fi
+}
+
+# Show configuration
+cmd_config() {
+    check_git_repo
+    
+    if [[ -f "symphony.config.yml" ]]; then
+        echo -e "${BLUE}Current Symphony configuration:${NC}"
+        cat symphony.config.yml
+    else
+        echo -e "${RED}No symphony.config.yml found${NC}"
+        echo "Run 'symphony init' to create initial configuration"
+    fi
+}
+
+# Show version
+cmd_version() {
+    echo "Symphony v$SYMPHONY_VERSION"
+    echo "Tmux orchestration system for Claude Code"
+}
+
+# Main command handler
+main() {
+    case "${1:-help}" in
+        "init")
+            cmd_init
+            ;;
+        "start")
+            cmd_start "$2"
+            ;;
+        "status")
+            cmd_status
+            ;;
+        "attach")
+            cmd_attach
+            ;;
+        "stop")
+            cmd_stop
+            ;;
+        "clean")
+            cmd_clean
+            ;;
+        "logs")
+            cmd_logs "$2"
+            ;;
+        "config")
+            cmd_config
+            ;;
+        "version")
+            cmd_version
+            ;;
+        "help"|"--help"|"-h")
+            show_usage
+            ;;
+        *)
+            echo -e "${RED}Unknown command: $1${NC}"
+            echo
+            show_usage
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

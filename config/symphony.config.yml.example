@@ -1,0 +1,298 @@
+# Symphony Configuration Example
+# Copy this file to your project root as 'symphony.config.yml' and customize for your project
+
+version: 1.0
+
+# Agent lane assignments - define which directories each agent type can modify
+agent_lanes:
+  # Frontend agent - UI components, styling, client-side code
+  frontend-agent:
+    directories:
+      - '/src/components/'
+      - '/src/pages/'
+      - '/src/views/'
+      - '/src/styles/'
+      - '/src/assets/'
+      - '/public/'
+      - '/static/'
+    
+  # Backend agent - Server-side logic, APIs, business logic
+  backend-agent:
+    directories:
+      - '/api/'
+      - '/server/'
+      - '/src/server/'
+      - '/src/api/'
+      - '/lib/'
+      - '/src/lib/'
+      - '/middleware/'
+      - '/routes/'
+      - '/controllers/'
+      - '/services/'
+    
+  # Database agent - Database schemas, migrations, queries
+  database-agent:
+    directories:
+      - '/migrations/'
+      - '/src/migrations/'
+      - '/schemas/'
+      - '/src/schemas/'
+      - '/models/'
+      - '/src/models/'
+      - '/database/'
+      - '/src/database/'
+      - '/prisma/'
+      - '/sql/'
+    
+  # Test agent - All types of tests
+  test-agent:
+    directories:
+      - '/tests/'
+      - '/test/'
+      - '/__tests__/'
+      - '/src/__tests__/'
+      - '/spec/'
+      - '/cypress/'
+      - '/e2e/'
+      - '/*.test.js'
+      - '/*.test.ts'
+      - '/*.spec.js'
+      - '/*.spec.ts'
+    
+  # DevOps agent - CI/CD, deployment, infrastructure
+  devops-agent:
+    directories:
+      - '/.github/'
+      - '/.gitlab-ci.yml'
+      - '/docker/'
+      - '/Dockerfile'
+      - '/docker-compose.yml'
+      - '/k8s/'
+      - '/kubernetes/'
+      - '/terraform/'
+      - '/ansible/'
+      - '/scripts/'
+      - '/deploy/'
+      - '/ci/'
+    
+  # Security agent - Security configurations, auth
+  security-agent:
+    directories:
+      - '/src/auth/'
+      - '/auth/'
+      - '/security/'
+      - '/src/security/'
+      - '/config/security/'
+      - '/middleware/auth/'
+
+# Shared directories - can be edited by multiple agents with coordination
+shared_directories:
+  - '/shared/'
+  - '/src/shared/'
+  - '/types/'
+  - '/src/types/'
+  - '/interfaces/'
+  - '/src/interfaces/'
+  - '/utils/'
+  - '/src/utils/'
+  - '/constants/'
+  - '/src/constants/'
+
+# Orchestrator configuration
+orchestrator:
+  # Number of retries for failed operations
+  retry_count: 3
+  
+  # Timeout for agent operations (minutes)
+  timeout_minutes: 30
+  
+  # How often to check agent progress (seconds)
+  polling_interval_seconds: 30
+  
+  # Default branch to create worktrees from
+  base_branch: 'main'
+  
+  # Maximum number of simultaneous agents
+  max_parallel_agents: 6
+
+# Task processing configuration
+task_processing:
+  # Maximum number of agents to run in parallel
+  max_parallel_agents: 4
+  
+  # Require human approval before starting agents
+  require_human_approval: true
+  
+  # Require approval for final integration
+  require_integration_approval: true
+  
+  # Auto-merge strategy: conservative, aggressive, manual
+  auto_merge_strategy: 'conservative'
+  
+  # Auto-commit agent work when complete
+  auto_commit: true
+  
+  # Commit message template
+  commit_message_template: 'Symphony: {task_description} - {agent_type} implementation'
+
+# Pre-flight checks configuration
+pre_flight:
+  enabled: true
+  checks:
+    # Analyze project dependencies
+    - dependency_analysis
+    
+    # Map project directory structure
+    - directory_structure
+    
+    # Predict potential conflicts
+    - conflict_prediction
+    
+    # Check for uncommitted changes
+    - git_status_check
+    
+    # Validate configuration
+    - config_validation
+
+# Agent-specific configurations
+agent_config:
+  frontend-agent:
+    # Prefer specific Claude Code agent type
+    claude_agent_type: 'frontend-developer'
+    
+    # Additional instructions
+    instructions: |
+      Focus on creating responsive, accessible UI components.
+      Use existing design system patterns.
+      Ensure TypeScript type safety.
+    
+    # Required tools/frameworks to check for
+    required_tools:
+      - 'react'
+      - 'typescript'
+    
+  backend-agent:
+    claude_agent_type: 'backend-architect'
+    instructions: |
+      Design RESTful APIs with proper error handling.
+      Implement security best practices.
+      Use existing authentication patterns.
+    required_tools:
+      - 'express'
+      - 'node'
+    
+  database-agent:
+    claude_agent_type: 'database-optimizer'
+    instructions: |
+      Create normalized schemas with proper indexes.
+      Handle migrations safely.
+      Consider performance implications.
+    
+  test-agent:
+    claude_agent_type: 'test-automator'
+    instructions: |
+      Write comprehensive unit and integration tests.
+      Ensure good test coverage.
+      Follow existing test patterns.
+    
+  devops-agent:
+    claude_agent_type: 'deployment-engineer'
+    instructions: |
+      Configure CI/CD pipelines.
+      Ensure security in deployment scripts.
+      Follow infrastructure as code principles.
+
+# Monitoring and logging
+monitoring:
+  # Enable detailed logging
+  verbose_logging: true
+  
+  # Log file locations
+  log_directory: '.symphony/logs/'
+  
+  # Rotate logs after size (MB)
+  log_rotation_size: 10
+  
+  # Keep log files for days
+  log_retention_days: 7
+
+# Notification settings (future enhancement)
+notifications:
+  enabled: false
+  # slack_webhook: ''
+  # email_recipients: []
+  # discord_webhook: ''
+
+# Advanced settings
+advanced:
+  # Enable experimental features
+  experimental_features: false
+  
+  # Custom tmux layout name (if you have custom layouts)
+  custom_tmux_layout: null
+  
+  # Environment variables to pass to agents
+  agent_environment:
+    NODE_ENV: 'development'
+    # Add any environment variables your agents need
+  
+  # Custom commands to run before starting agents
+  pre_agent_commands: []
+    # - 'npm install'
+    # - 'npm run build'
+  
+  # Custom commands to run after agents complete
+  post_agent_commands: []
+    # - 'npm test'
+    # - 'npm run lint'
+
+# Project-specific overrides
+project_overrides:
+  # Override settings based on project type detection
+  
+  # Next.js project
+  nextjs:
+    agent_lanes:
+      frontend-agent:
+        directories:
+          - '/pages/'
+          - '/components/'
+          - '/app/'
+          - '/src/app/'
+          - '/public/'
+          - '/styles/'
+  
+  # Django project  
+  django:
+    agent_lanes:
+      backend-agent:
+        directories:
+          - '/*/models.py'
+          - '/*/views.py'
+          - '/*/urls.py'
+          - '/*/admin.py'
+          - '/*/serializers.py'
+      database-agent:
+        directories:
+          - '/*/migrations/'
+          - '/*/models.py'
+
+# Example configurations for different project types
+examples:
+  # React + Node.js full-stack app
+  react_node:
+    frontend_dirs: ['/src/client/', '/public/']
+    backend_dirs: ['/src/server/', '/api/']
+    shared_dirs: ['/src/shared/']
+  
+  # Next.js app
+  nextjs:
+    frontend_dirs: ['/pages/', '/components/', '/app/', '/public/']
+    api_dirs: ['/pages/api/', '/app/api/']
+    shared_dirs: ['/lib/', '/utils/']
+  
+  # Python Django app
+  django:
+    backend_dirs: ['/*/models.py', '/*/views.py', '/api/']
+    frontend_dirs: ['/static/', '/templates/']
+    database_dirs: ['/*/migrations/']
