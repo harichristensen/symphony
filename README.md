@@ -20,7 +20,7 @@ Symphony enables true parallel execution of multiple Claude Code agents using tm
 
 ```bash
 # One-line install
-curl -sSL https://raw.githubusercontent.com/YOUR_ORG/symphony/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/harichristensen/symphony/main/install.sh | bash
 
 # Restart your shell or source your profile
 source ~/.zshrc  # or ~/.bashrc
@@ -298,8 +298,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 **Need help?** 
-- 📖 [Documentation](https://github.com/YOUR_ORG/symphony/wiki)
-- 🐛 [Report Issues](https://github.com/YOUR_ORG/symphony/issues)
-- 💬 [Discussions](https://github.com/YOUR_ORG/symphony/discussions)
+- 📖 [Documentation](https://github.com/harichristensen/symphony/wiki)
+- 🐛 [Report Issues](https://github.com/harichristensen/symphony/issues)
+- 💬 [Discussions](https://github.com/harichristensen/symphony/discussions)
 
 Happy orchestrating! 🎼✨

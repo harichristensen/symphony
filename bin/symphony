@@ -50,7 +50,7 @@ Examples:
   symphony clean
 
 For more help: symphony <command> --help
-Documentation: https://github.com/YOUR_ORG/symphony
+Documentation: https://github.com/harichristensen/symphony
 EOF
 }
 

@@ -20,7 +20,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # GitHub raw content base URL
-REPO_BASE="https://raw.githubusercontent.com/YOUR_ORG/symphony/main"
+REPO_BASE="https://raw.githubusercontent.com/harichristensen/symphony/main"
 
 echo -e "${BLUE}🎼 Symphony Installer v${SYMPHONY_VERSION}${NC}"
 echo "Installing Symphony tmux orchestration system..."
@@ -178,8 +178,8 @@ show_completion() {
     echo "3. Configure agent lanes in symphony.config.yml"
     echo "4. Start orchestrating: symphony start"
     echo
-    echo "Documentation: https://github.com/YOUR_ORG/symphony/blob/main/README.md"
-    echo "Issues: https://github.com/YOUR_ORG/symphony/issues"
+    echo "Documentation: https://github.com/harichristensen/symphony/blob/main/README.md"
+    echo "Issues: https://github.com/harichristensen/symphony/issues"
     echo
 }
 
